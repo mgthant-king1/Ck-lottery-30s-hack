@@ -48,6 +48,14 @@ export function generateDeterministicPrediction(results: any[]): StrategyResult 
   // 3. Harmonic Oscillation (Pattern matching)
   const isBBS = sizes[0] === 'small' && sizes[1] === 'big' && sizes[2] === 'big';
   const isSSB = sizes[0] === 'big' && sizes[1] === 'small' && sizes[2] === 'small';
+  
+  // 4. Recursive Sequential Analysis
+  const sequences = [];
+  for (let i = 0; i < sizes.length - 3; i++) {
+    sequences.push(sizes.slice(i, i + 3).join('-'));
+  }
+  const currentSeq = sizes.slice(0, 3).join('-');
+  const seqFrequency = sequences.filter(s => s === currentSeq).length;
 
   let predictedSize: 'big' | 'small' = sizes[0] as any;
   let reasoning = "";
@@ -64,6 +72,11 @@ export function generateDeterministicPrediction(results: any[]): StrategyResult 
       reasoning = `Dragon Momentum: Strong ${streakCount}-period ${sizes[0]} streak detected. Following volume gravity.`;
       confidence = 0.88;
     }
+  } else if (seqFrequency >= 2) {
+    // Pattern repeat detected
+    predictedSize = sizes[0] as any;
+    reasoning = `Cyclic Sync: Pattern "${currentSeq}" seen ${seqFrequency} times in recent 15 results. High probability of continuation.`;
+    confidence = 0.85;
   } else if (sizes[0] !== sizes[1] && sizes[1] !== sizes[2]) {
     predictedSize = sizes[0] === 'big' ? 'small' : 'big';
     reasoning = `Mirror Pulse: Alternating sequence detected. Predicting next oscillation phase.`;

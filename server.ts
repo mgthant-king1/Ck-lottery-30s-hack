@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import fs from "fs";
 import axios from "axios";
 import dotenv from "dotenv";
 import { generateDeterministicPrediction } from "./src/services/predictionEngine";
@@ -90,16 +91,35 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
+    // Note: distPath path resolution for Vercel
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+    }
+    
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      // For Vercel API routes, we don't want to serve index.html for known API paths
+      if (req.path.startsWith('/api')) {
+        return res.status(404).json({ code: 404, msg: "API path not found on this server instance" });
+      }
+      
+      const indexPath = path.join(process.cwd(), "dist", "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send("Build artifacts not found. Please run npm run build.");
+      }
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // Only listen if not running as a Vercel function
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
+  return app;
 }
 
-startServer();
+export const app = await startServer();
+export default app;
