@@ -11,26 +11,28 @@ const globalApiConfig = {
 export default async function handler(req: any, res: any) {
   // Global Try-Catch to prevent 500 without details
   try {
-    // Handle CORS/Preflight
+    // 1. CORS Headers - Mandatory for Vercel mixed environments
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 
     if (req.method === 'OPTIONS') {
       return res.status(200).end();
     }
 
-    // Simplified routing for Vercel - if it's called, we treat it as lottery results
     if (req.method !== 'POST') {
-      return res.status(405).json({ code: 405, msg: "Method Not Allowed. Use POST." });
+      return res.status(405).json({ code: 405, msg: "Method Not Allowed. Use POST requests to /api/lottery/results" });
     }
 
     const incomingConfig = req.body || {};
+    
+    // 2. Secret Priority: Env Vars > Incoming Body > Fallback
     const config = {
-      token: incomingConfig.token || process.env.API_TOKEN || globalApiConfig.token,
-      signature: incomingConfig.signature || process.env.API_SIGNATURE || globalApiConfig.signature,
-      timestamp: incomingConfig.timestamp || process.env.API_TIMESTAMP || globalApiConfig.timestamp,
-      random: incomingConfig.random || process.env.API_RANDOM || globalApiConfig.random
+      token: process.env.API_TOKEN || incomingConfig.token || globalApiConfig.token,
+      signature: process.env.API_SIGNATURE || incomingConfig.signature || globalApiConfig.signature,
+      timestamp: process.env.API_TIMESTAMP || incomingConfig.timestamp || globalApiConfig.timestamp,
+      random: process.env.API_RANDOM || incomingConfig.random || globalApiConfig.random
     };
 
     const payload = {
@@ -46,7 +48,7 @@ export default async function handler(req: any, res: any) {
     const token = config.token;
     const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 
-    console.log(`[Vercel-Proxy] Fetching TypeId: ${payload.typeId}`);
+    console.log(`[Vercel-Proxy] Requesting TypeId ${payload.typeId} with Signature ${payload.signature.substring(0, 5)}...`);
 
     const response = await axios.post("https://ckygjf6r.com/api/webapi/GetNoaverageEmerdList", payload, {
       headers: {
@@ -54,16 +56,16 @@ export default async function handler(req: any, res: any) {
         "Accept": "application/json, text/plain, */*",
         "Authorization": authHeader,
         "Ar-Origin": "https://www.cklottery.top",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
         "Referer": "https://www.cklottery.top/",
-        "Connection": "keep-alive"
+        "X-Requested-With": "XMLHttpRequest"
       },
-      timeout: 10000
+      timeout: 15000 // Increased timeout for serverless execution
     });
 
     const data = response.data;
 
-    // Inject Prediction if data exists
+    // 3. Inject Precise Logic
     if (data?.code === 0 && data?.data?.list?.length > 0) {
       try {
         const results = data.data.list;
@@ -73,26 +75,31 @@ export default async function handler(req: any, res: any) {
         data.prediction = {
           ...prediction,
           issueNumber: nextIssue,
-          serverTimestamp: Date.now()
+          serverTimestamp: Date.now(),
+          engine: "AMD-REVERSION-V7"
         };
       } catch (predErr: any) {
-        console.error("[Vercel-API] Prediction Error:", predErr.message);
+        console.error("[Vercel-API] Analysis Engine Failure:", predErr.message);
       }
+    } else if (data?.code === 500) {
+       console.error("[Upstream] Token/Auth Failure:", data.msg);
     }
 
     return res.status(200).json(data);
 
   } catch (error: any) {
-    console.error("[Vercel-API] Fatal Error:", error.message);
+    console.error("[Vercel-API] Execution Error:", error.message);
     
-    // Check if it's an axios error
+    // Determine the source of 500
     const statusCode = error.response?.status || 500;
-    const errorMsg = error.response?.data?.msg || error.message;
+    const upstreamData = error.response?.data;
 
     return res.status(statusCode).json({ 
       code: statusCode, 
-      msg: "Proxy Error: " + errorMsg,
-      detail: "Vercel serverless function could not reach upstream or crashed logic."
+      msg: "SERVER_PROTOCOL_ERROR",
+      info: "The upstream lottery API rejected the request or timed out.",
+      debug: error.message,
+      upstream: upstreamData || null
     });
   }
 }
