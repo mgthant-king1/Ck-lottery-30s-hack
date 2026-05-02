@@ -7,11 +7,12 @@ import { generateDeterministicPrediction } from "./src/services/predictionEngine
 
 dotenv.config();
 
-let globalApiConfig = {
-  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc3NzczMTYyOSIsIm5iZiI6IjE3Nzc3MzExNzkyIiwiZXhwIjoiMTc3NzczMzQyOSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi1pZGVudGl0eS1jbGFpbXMvZXhwaXJhdGlvbiI6IjUvMi8yMDI2IDk6MjA6MjkgUE0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBY2Nlc3NfVG9rZW4iLCJVc2VySWQiOiI0ODcyMDMiLCJVc2VyTmFtZSI6Ijk1OTc3NzU0NTU4OSIsIlVzZXJQaG90byI6IjIwIiwiTmlja05hbWUiOiJNR1RIQU5UICIsIkFtb3VudCI6IjEzLjg3IiwiSW50ZWdyYWwiOiIwIiwiTG9naW5NYXJrIjoiaDUiLCJMb2dpblRpbWUiOiI1LzIvMjAyNiA4OjUwOjI5IFBNIiwiTG9naW5JUEFkZHJlc3MiOiI1Ni42OS4zMi42NiIsIkRiTnVtYmVyIjoiMCIsIklzdmFsaWRhdG9yIjoiMCIsIktleUNvZGUiOiI1OTUiLCJUb2tlblR5cGUiOiJBY2Nlc3NfVG9rZW4iLCJQaG9uZVR5cGUiOiIxIiwiVXNlclR5cGUiOiIwIiwiVXNlck5hbWUyIjoiIiwiaXNzIjoiand0SXNzdWVyIiwiYXVkIjoibG90dGVyeVRpY2tldCJ9.Bdkvu8LVelMKnsknZBG0klaf67q75pzYvVEJR0miR5A",
-  signature: "02B709728F301B2AD39740BED6BDA1CD",
-  timestamp: "1777731689",
-  random: "5074950b0f484b108bd9a8067e7f1025"
+// Default config from Env Vars or hardcoded fallback
+const globalApiConfig = {
+  token: process.env.API_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc3NzczMTYyOSIsIm5iZiI6IjE3Nzc3MzExNzkyIiwiZXhwIjoiMTc3NzczMzQyOSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi1pZGVudGl0eS1jbGFpbXMvZXhwaXJhdGlvbiI6IjUvMi8yMDI2IDk6MjA6MjkgUE0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBY2Nlc3NfVG9rZW4iLCJVc2VySWQiOiI0ODcyMDMiLCJVc2VyTmFtZSI6Ijk1OTc3NzU0NTU4OSIsIlVzZXJQaG90byI6IjIwIiwiTmlja05hbWUiOiJNR1RIQU5UICIsIkFtb3VudCI6IjEzLjg3IiwiSW50ZWdyYWwiOiIwIiwiTG9naW5NYXJrIjoiaDUiLCJMb2dpblRpbWUiOiI1LzIvMjAyNiA4OjUwOjI5IFBNIiwiTG9naW5JUEFkZHJlc3MiOiI1Ni42OS4zMi42NiIsIkRiTnVtYmVyIjoiMCIsIklzdmFsaWRhdG9yIjoiMCIsIktleUNvZGUiOiI1OTUiLCJUb2tlblR5cGUiOiJBY2Nlc3NfVG9rZW4iLCJQaG9uZVR5cGUiOiIxIiwiVXNlclR5cGUiOiIwIiwiVXNlck5hbWUyIjoiIiwiaXNzIjoiand0SXNzdWVyIiwiYXVkIjoibG90dGVyeVRpY2tldCJ9.Bdkvu8LVelMKnsknZBG0klaf67q75pzYvVEJR0miR5A",
+  signature: process.env.API_SIGNATURE || "02B709728F301B2AD39740BED6BDA1CD",
+  timestamp: process.env.API_TIMESTAMP || "1777731689",
+  random: process.env.API_RANDOM || "5074950b0f484b108bd9a8067e7f1025"
 };
 
 async function fetchLotteryResults(incomingConfig: any = {}) {
@@ -30,7 +31,7 @@ async function fetchLotteryResults(incomingConfig: any = {}) {
     const token = config.token;
     const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 
-    console.log("Requesting Upstream with Payload:", JSON.stringify(payload));
+    console.log(`[Proxy] Requesting Period List (TypeId: ${payload.typeId})`);
 
     const response = await axios.post("https://ckygjf6r.com/api/webapi/GetNoaverageEmerdList", payload, {
       headers: {
@@ -45,59 +46,12 @@ async function fetchLotteryResults(incomingConfig: any = {}) {
       timeout: 10000
     });
 
-    if (response.data?.code === 0 && response.data?.data?.list) {
-      if (incomingConfig.token) globalApiConfig.token = incomingConfig.token;
-      if (incomingConfig.signature) globalApiConfig.signature = incomingConfig.signature;
-      if (incomingConfig.random) globalApiConfig.random = incomingConfig.random;
-      if (incomingConfig.timestamp) globalApiConfig.timestamp = incomingConfig.timestamp.toString();
-    }
-    
     return response.data;
   } catch (error: any) {
-    console.error("Upstream Error:", error.message);
-    return { code: 500, msg: "Upstream Protocol Error: " + error.message };
+    console.error("[Proxy] Upstream Error:", error.message);
+    return { code: 500, msg: "Connection Refused by Upstream. Vercel IP might be blocked or Signature expired." };
   }
 }
-
-let lastReportedIssue = "";
-
-async function predictionCycle() {
-  console.log("Prediction Cycle Running...");
-  const response = await fetchLotteryResults();
-  
-  if (response?.code !== 0) {
-    console.error(`API Error: ${response?.msg || 'Unknown Error'}`);
-  } else {
-    const results = response?.data?.list || [];
-    
-    if (results.length > 0) {
-      const latestResult = results[0];
-      const nextIssue = (BigInt(latestResult.issueNumber) + BigInt(1)).toString();
-
-      if (nextIssue !== lastReportedIssue) {
-        console.log(`New Issue Detected: ${nextIssue}. Updating Prediction...`);
-        
-        try {
-          const prediction = generateDeterministicPrediction(results);
-          if (prediction) {
-            console.log(`Prediction for ${nextIssue}: ${prediction.size} ${prediction.number}`);
-            lastReportedIssue = nextIssue;
-          }
-        } catch (predError: any) {
-          console.error("Prediction Logic Error:", predError.message);
-        }
-      }
-    }
-  }
-
-  // Sync with clock (every 30s)
-  const now = Date.now();
-  const nextSync = Math.ceil(now / 30000) * 30000;
-  const delay = (nextSync - now) + 1500; // 1.5s buffer for API update
-  setTimeout(predictionCycle, delay);
-}
-
-// Removed generateAIPrediction as it's replaced by deterministic engine
 
 async function startServer() {
   const app = express();
@@ -105,10 +59,28 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Proxy endpoint for CK Lottery API
+  // API Route with on-the-fly prediction
   app.post("/api/lottery/results", async (req, res) => {
-    const response = await fetchLotteryResults(req.body);
-    res.json(response);
+    const data = await fetchLotteryResults(req.body);
+    
+    // If successful, inject prediction for the next period
+    if (data?.code === 0 && data?.data?.list?.length > 0) {
+      try {
+        const results = data.data.list;
+        const prediction = generateDeterministicPrediction(results);
+        const nextIssue = (BigInt(results[0].issueNumber) + BigInt(1)).toString();
+        
+        data.prediction = {
+          ...prediction,
+          issueNumber: nextIssue,
+          serverTimestamp: Date.now()
+        };
+      } catch (err) {
+        console.error("[Backend] Prediction Logic Error:", err);
+      }
+    }
+    
+    res.json(data);
   });
 
   if (process.env.NODE_ENV !== "production") {
@@ -127,7 +99,6 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
-    predictionCycle(); // Start the 24/7 background cycle
   });
 }
 

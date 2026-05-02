@@ -104,6 +104,21 @@ export default function App() {
       if (response.data?.code === 0) {
         const newList = response.data.data.list as LotteryResult[];
         
+        // Handle server-side prediction if provided
+        if (response.data.prediction) {
+          const sp = response.data.prediction;
+          setAiPrediction({
+            issueNumber: sp.issueNumber,
+            number: sp.number,
+            color: sp.color,
+            size: sp.size,
+            confidence: sp.confidence,
+            reasoning: sp.reasoning,
+            analysis: sp.analysis,
+            timestamp: new Date()
+          });
+        }
+
         // Track Accuracy based ONLY on BIG/SMALL as requested
         if (aiPrediction && newList.length > 0) {
           const matched = newList.find(r => r.issueNumber === aiPrediction.issueNumber);
@@ -298,6 +313,17 @@ export default function App() {
               {demoMode ? 'SIMULATION_ON' : 'LIVE_DATA'}
             </button>
             <div className="flex items-center gap-4 bg-zinc-900/50 border border-white/5 p-2 pr-6 rounded-2xl backdrop-blur-md">
+              {error ? (
+                <div className="flex flex-col items-end pr-2 border-r border-red-500/20">
+                  <span className="text-[7px] font-black text-red-500 uppercase tracking-widest">API_ERR</span>
+                  <span className="text-[9px] font-mono font-bold text-red-400">Offline</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-end pr-2 border-r border-emerald-500/20">
+                  <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest">API_SYNC</span>
+                  <span className="text-[9px] font-mono font-bold text-emerald-400">Online</span>
+                </div>
+              )}
               <div className="w-32 h-10 bg-black/40 rounded-xl flex items-center justify-center relative overflow-hidden">
                 <div key={results[0]?.issueNumber} className="absolute inset-0 bg-emerald-500/5 origin-left" style={{ animation: `grow ${REFRESH_RATE}ms linear forwards` }} />
                 <span className="text-[10px] font-black text-emerald-400 tracking-tighter uppercase relative z-10">{loading ? 'SYNCING...' : 'LIVE_FEED'}</span>
