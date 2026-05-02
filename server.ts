@@ -40,11 +40,12 @@ async function fetchLotteryResults(incomingConfig: any = {}) {
         "Accept": "application/json, text/plain, */*",
         "Authorization": authHeader,
         "Ar-Origin": "https://www.cklottery.top",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
         "Referer": "https://www.cklottery.top/",
-        "Connection": "keep-alive"
+        "X-Requested-With": "XMLHttpRequest",
+        "Origin": "https://www.cklottery.top"
       },
-      timeout: 10000
+      timeout: 12000
     });
 
     return response.data;
@@ -114,7 +115,7 @@ export async function createApp() {
 
 // Start listener only in non-Vercel environment
 if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3000;
+  const PORT = parseInt(process.env.PORT || "3000");
   createApp().then(app => {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
