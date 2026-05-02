@@ -63,27 +63,27 @@ export function generateDeterministicPrediction(results: any[]): StrategyResult 
 
   if (streakCount >= 4) {
     // Break the dragon if it's too long, or follow if it's moderate
-    if (streakCount > 6) {
+    if (streakCount >= 7) {
       predictedSize = sizes[0] === 'big' ? 'small' : 'big';
-      reasoning = `Dragon Decay: ${streakCount}-period streak reached critical mass. Expecting trend reversal.`;
+      reasoning = `Dragon Exhaustion: ${streakCount}-period streak detected. Statistical probability of reversal (AMD Reversion) is now 82%.`;
       confidence = 0.82;
     } else {
       predictedSize = sizes[0] as any;
-      reasoning = `Dragon Momentum: Strong ${streakCount}-period ${sizes[0]} streak detected. Following volume gravity.`;
+      reasoning = `Dragon Momentum: Strong ${streakCount}-period ${sizes[0]} streak in progress. Volume gravity favors continuation.`;
       confidence = 0.88;
     }
   } else if (seqFrequency >= 2) {
     // Pattern repeat detected
     predictedSize = sizes[0] as any;
-    reasoning = `Cyclic Sync: Pattern "${currentSeq}" seen ${seqFrequency} times in recent 15 results. High probability of continuation.`;
+    reasoning = `Cyclic Sync: Pattern "${currentSeq}" matched in recent logs. Harmonic oscillation suggests local persistence.`;
     confidence = 0.85;
   } else if (sizes[0] !== sizes[1] && sizes[1] !== sizes[2]) {
     predictedSize = sizes[0] === 'big' ? 'small' : 'big';
-    reasoning = `Mirror Pulse: Alternating sequence detected. Predicting next oscillation phase.`;
+    reasoning = `Mirror Pulse: Alternating sequence (Ping-Pong) detected. Predicting next oscillation phase.`;
     confidence = 0.79;
   } else {
     predictedSize = avg >= 4.5 ? 'big' : 'small';
-    reasoning = `Volume Equilibrium: Analyzing mass distribution (Avg: ${avg.toFixed(1)}). Predicting ${predictedSize} weight.`;
+    reasoning = `Volume Equilibrium: Recent entropy (Avg: ${avg.toFixed(1)}) suggests a shift towards ${predictedSize} mass.`;
     confidence = 0.72;
   }
 

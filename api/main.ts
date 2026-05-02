@@ -9,70 +9,90 @@ const globalApiConfig = {
 };
 
 export default async function handler(req: any, res: any) {
-  // Simple router logic for Vercel
-  const path = req.url || "";
-  
-  if (path.includes("/api/lottery/results")) {
+  // Global Try-Catch to prevent 500 without details
+  try {
+    // Handle CORS/Preflight
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+
+    // Simplified routing for Vercel - if it's called, we treat it as lottery results
     if (req.method !== 'POST') {
-      return res.status(405).json({ code: 405, msg: "Method Not Allowed" });
+      return res.status(405).json({ code: 405, msg: "Method Not Allowed. Use POST." });
     }
 
-    try {
-      const incomingConfig = req.body || {};
-      const config = { ...globalApiConfig, ...incomingConfig };
+    const incomingConfig = req.body || {};
+    const config = {
+      token: incomingConfig.token || process.env.API_TOKEN || globalApiConfig.token,
+      signature: incomingConfig.signature || process.env.API_SIGNATURE || globalApiConfig.signature,
+      timestamp: incomingConfig.timestamp || process.env.API_TIMESTAMP || globalApiConfig.timestamp,
+      random: incomingConfig.random || process.env.API_RANDOM || globalApiConfig.random
+    };
 
-      const payload = {
-        pageSize: incomingConfig.pageSize || 10,
-        pageNo: incomingConfig.pageNo || 1,
-        typeId: incomingConfig.typeId || 30,
-        language: 0,
-        random: config.random,
-        signature: config.signature,
-        timestamp: parseInt(config.timestamp.toString())
-      };
+    const payload = {
+      pageSize: incomingConfig.pageSize || 10,
+      pageNo: incomingConfig.pageNo || 1,
+      typeId: incomingConfig.typeId || 30,
+      language: 0,
+      random: config.random,
+      signature: config.signature,
+      timestamp: parseInt(config.timestamp.toString())
+    };
 
-      const token = config.token;
-      const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    const token = config.token;
+    const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 
-      const response = await axios.post("https://ckygjf6r.com/api/webapi/GetNoaverageEmerdList", payload, {
-        headers: {
-          "Content-Type": "application/json;charset=UTF-8",
-          "Accept": "application/json, text/plain, */*",
-          "Authorization": authHeader,
-          "Ar-Origin": "https://www.cklottery.top",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Referer": "https://www.cklottery.top/",
-          "Connection": "keep-alive"
-        },
-        timeout: 10000
-      });
+    console.log(`[Vercel-Proxy] Fetching TypeId: ${payload.typeId}`);
 
-      const data = response.data;
+    const response = await axios.post("https://ckygjf6r.com/api/webapi/GetNoaverageEmerdList", payload, {
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        "Accept": "application/json, text/plain, */*",
+        "Authorization": authHeader,
+        "Ar-Origin": "https://www.cklottery.top",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.cklottery.top/",
+        "Connection": "keep-alive"
+      },
+      timeout: 10000
+    });
 
-      // Inject Prediction
-      if (data?.code === 0 && data?.data?.list?.length > 0) {
-        try {
-          const results = data.data.list;
-          const prediction = generateDeterministicPrediction(results);
-          const nextIssue = (BigInt(results[0].issueNumber) + BigInt(1)).toString();
-          
-          data.prediction = {
-            ...prediction,
-            issueNumber: nextIssue,
-            serverTimestamp: Date.now()
-          };
-        } catch (err) {
-          console.error("[Vercel-API] Prediction Logic Error:", err);
-        }
+    const data = response.data;
+
+    // Inject Prediction if data exists
+    if (data?.code === 0 && data?.data?.list?.length > 0) {
+      try {
+        const results = data.data.list;
+        const prediction = generateDeterministicPrediction(results);
+        const nextIssue = (BigInt(results[0].issueNumber) + BigInt(1)).toString();
+        
+        data.prediction = {
+          ...prediction,
+          issueNumber: nextIssue,
+          serverTimestamp: Date.now()
+        };
+      } catch (predErr: any) {
+        console.error("[Vercel-API] Prediction Error:", predErr.message);
       }
-
-      return res.status(200).json(data);
-    } catch (error: any) {
-      console.error("[Vercel-API] Upstream Error:", error.message);
-      return res.status(500).json({ code: 500, msg: "Upstream Proxy Error: " + error.message });
     }
-  }
 
-  // Fallback for unmatched API calls
-  return res.status(404).json({ code: 404, msg: "API Endpoint Not Found: " + path });
+    return res.status(200).json(data);
+
+  } catch (error: any) {
+    console.error("[Vercel-API] Fatal Error:", error.message);
+    
+    // Check if it's an axios error
+    const statusCode = error.response?.status || 500;
+    const errorMsg = error.response?.data?.msg || error.message;
+
+    return res.status(statusCode).json({ 
+      code: statusCode, 
+      msg: "Proxy Error: " + errorMsg,
+      detail: "Vercel serverless function could not reach upstream or crashed logic."
+    });
+  }
 }
