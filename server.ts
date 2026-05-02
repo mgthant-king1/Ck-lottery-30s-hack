@@ -54,10 +54,8 @@ async function fetchLotteryResults(incomingConfig: any = {}) {
   }
 }
 
-async function startServer() {
+export async function createApp() {
   const app = express();
-  const PORT = 3000;
-
   app.use(express.json());
 
   // API Route with on-the-fly prediction
@@ -91,35 +89,35 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // Note: distPath path resolution for Vercel
+    // Serving static files in production (non-serverless environment)
     const distPath = path.join(process.cwd(), "dist");
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
     }
     
     app.get("*", (req, res) => {
-      // For Vercel API routes, we don't want to serve index.html for known API paths
       if (req.path.startsWith('/api')) {
-        return res.status(404).json({ code: 404, msg: "API path not found on this server instance" });
+        return res.status(404).json({ code: 404, msg: "API path not found" });
       }
       
       const indexPath = path.join(process.cwd(), "dist", "index.html");
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
-        res.status(404).send("Build artifacts not found. Please run npm run build.");
+        res.status(404).send("Build artifacts not found.");
       }
     });
   }
 
-  // Only listen if not running as a Vercel function
-  if (!process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  }
   return app;
 }
 
-export const app = await startServer();
-export default app;
+// Start listener only in non-Vercel environment
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  createApp().then(app => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  });
+}
