@@ -92,7 +92,7 @@ export default function App() {
     const timer = setInterval(() => {
       if (lastUpdated) {
         const diff = (Date.now() - lastUpdated.getTime()) / 1000;
-        setIsStale(diff > 45); // Consider stale if no update for 45 seconds
+        setIsStale(diff > 90); // Increased threshold for stability
       }
     }, 1000);
     return () => clearInterval(timer);
