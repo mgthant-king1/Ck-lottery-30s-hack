@@ -59,10 +59,14 @@ export default async function handler(req: any, res: any) {
         "Accept": "application/json, text/plain, */*",
         "Authorization": authHeader,
         "Ar-Origin": "https://www.cklottery.top",
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
-        "Referer": "https://www.cklottery.top/",
         "X-Requested-With": "XMLHttpRequest",
-        "Origin": "https://www.cklottery.top"
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Referer": "https://www.cklottery.top/",
+        "Origin": "https://www.cklottery.top",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site"
       },
       timeout: 12000
     });
