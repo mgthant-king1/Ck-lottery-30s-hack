@@ -1,101 +1,10 @@
 import axios from "axios";
-
-// Deterministic Prediction Logic embedded for Vercel Serverless Reliability
-function generateDeterministicPrediction(results: any[]) {
-  if (results.length < 5) {
-    return {
-      number: 5,
-      color: 'green',
-      size: 'big',
-      confidence: 0.5,
-      reasoning: "Insufficient data for deep analysis.",
-      analysis: []
-    };
-  }
-
-  const latest = results.slice(0, 15);
-  const numbers = latest.map(r => parseInt(r.number));
-  const sizes = latest.map(r => parseInt(r.number) >= 5 ? 'big' : 'small');
-  const colors = latest.map(r => {
-    const n = parseInt(r.number);
-    if (n === 0) return 'violet-red';
-    if (n === 5) return 'violet-green';
-    return n % 2 === 0 ? 'red' : 'green';
-  });
-
-  let streakCount = 1;
-  for (let i = 0; i < sizes.length - 1; i++) {
-    if (sizes[i] === sizes[i + 1]) streakCount++;
-    else break;
-  }
-
-  const avg = numbers.reduce((a, b) => a + b, 0) / numbers.length;
-  
-  const sequences = [];
-  for (let i = 0; i < sizes.length - 3; i++) {
-    sequences.push(sizes.slice(i, i + 3).join('-'));
-  }
-  const currentSeq = sizes.slice(0, 3).join('-');
-  const seqFrequency = sequences.filter(s => s === currentSeq).length;
-
-  let predictedSize: 'big' | 'small' = sizes[0] as any;
-  let reasoning = "";
-  let confidence = 0.75;
-
-  if (streakCount >= 4) {
-    if (streakCount >= 7) {
-      predictedSize = sizes[0] === 'big' ? 'small' : 'big';
-      reasoning = `Dragon Exhaustion: ${streakCount}-period streak detected. Statistical probability of reversal (AMD Reversion) is now 82%.`;
-      confidence = 0.82;
-    } else {
-      predictedSize = sizes[0] as any;
-      reasoning = `Dragon Momentum: Strong ${streakCount}-period ${sizes[0]} streak in progress. Volume gravity favors continuation.`;
-      confidence = 0.88;
-    }
-  } else if (seqFrequency >= 2) {
-    predictedSize = sizes[0] as any;
-    reasoning = `Cyclic Sync: Pattern "${currentSeq}" matched in recent logs. Harmonic oscillation suggests local persistence.`;
-    confidence = 0.85;
-  } else if (sizes[0] !== sizes[1] && sizes[1] !== sizes[2]) {
-    predictedSize = sizes[0] === 'big' ? 'small' : 'big';
-    reasoning = `Mirror Pulse: Alternating sequence (Ping-Pong) detected. Predicting next oscillation phase.`;
-    confidence = 0.79;
-  } else {
-    predictedSize = avg >= 4.5 ? 'big' : 'small';
-    reasoning = `Volume Equilibrium: Recent entropy (Avg: ${avg.toFixed(1)}) suggests a shift towards ${predictedSize} mass.`;
-    confidence = 0.72;
-  }
-
-  const colorCounts = { red: 0, green: 0, violet: 0 };
-  colors.forEach(c => {
-    if (c.includes('red')) colorCounts.red++;
-    if (c.includes('green')) colorCounts.green++;
-    if (c.includes('violet')) colorCounts.violet++;
-  });
-
-  let predictedColor: 'red' | 'green' | 'violet' = colorCounts.red > colorCounts.green ? 'red' : 'green';
-  
-  let predictedNum = predictedSize === 'big' ? 7 : 2;
-
-  return {
-    number: predictedNum,
-    color: predictedColor,
-    size: predictedSize,
-    confidence: confidence,
-    reasoning: reasoning,
-    analysis: [
-      { label: "Momentum", value: streakCount >= 3 ? "Hyper" : "Stable", type: "momentum", impact: streakCount >= 5 ? "critical" : "high" },
-      { label: "Vol Gravity", value: avg > 5 ? "Positive" : "Negative", type: "volume", impact: "medium" },
-      { label: "Stability", value: "Verified", type: "pattern", impact: "low" },
-      { label: "Mirror Sync", value: reasoning.includes("Mirror") ? "Active" : "Scanning", type: "oscillation", impact: "high" }
-    ]
-  };
-}
+import { generateDeterministicPrediction } from "./lib/predictionEngine";
 
 const globalApiConfig = {
   token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc3NzczMTYyOSIsIm5iZiI6IjE3Nzc3MzExNzkyIiwiZXhwIjoiMTc3NzczMzQyOSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi1pZGVudGl0eS1jbGFpbXMvZXhwaXJhdGlvbiI6IjUvMi8yMDI2IDk6MjA6MjkgUE0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBY2Nlc3NfVG9rZW4iLCJVc2VySWQiOiI0ODcyMDMiLCJVc2VyTmFtZSI6Ijk1OTc3NzU0NTU4OSIsIlVzZXJQaG90byI6IjIwIiwiTmlja05hbWUiOiJNR1RIQU5UICIsIkFtb3VudCI6IjEzLjg3IiwiSW50ZWdyYWwiOiIwIiwiTG9naW5NYXJrIjoiaDUiLCJMb2dpblRpbWUiOiI1LzIvMjAyNiA4OjUwOjI5IFBNIiwiTG9naW5JUEFkZHJlc3MiOiI1Ni42OS4zMi42NiIsIkRiTnVtYmVyIjoiMCIsIklzdmFsaWRhdG9yIjoiMCIsIktleUNvZGUiOiI1OTUiLCJUb2tlblR5cGUiOiJBY2Nlc3NfVG9rZW4iLCJQaG9uZVR5cGUiOiIxIiwiVXNlclR5cGUiOiIwIiwiVXNlck5hbWUyIjoiIiwiaXNzIjoiand0SXNzdWVyIiwiYXVkIjoibG90dGVyeVRpY2tldCJ9.Bdkvu8LVelMKnsknZBG0klaf67q75pzYvVEJR0miR5A",
   signature: "02B709728F301B2AD39740BED6BDA1CD",
-  timestamp: "1777731689",
+  timestamp: "1777885318",
   random: "5074950b0f484b108bd9a8067e7f1025"
 };
 
@@ -163,27 +72,44 @@ export default async function handler(req: any, res: any) {
 
     // Inject Prediction
     if (data?.code === 0 && data?.data?.list?.length > 0) {
-      const results = data.data.list;
-      const prediction = generateDeterministicPrediction(results);
-      const nextIssue = (BigInt(results[0].issueNumber) + BigInt(1)).toString();
-      
-      data.prediction = {
-        ...prediction,
-        issueNumber: nextIssue,
-        serverTimestamp: Date.now(),
-        engine: "AMD-REVERSION-V8"
-      };
+      try {
+        const results = data.data.list;
+        const prediction = generateDeterministicPrediction(results);
+        
+        // Use a more robust issue number increment
+        const currentIssue = results[0].issueNumber;
+        let nextIssue = "";
+        try {
+          nextIssue = (BigInt(currentIssue) + BigInt(1)).toString();
+        } catch {
+          nextIssue = (parseInt(currentIssue) + 1).toString();
+        }
+        
+        data.prediction = {
+          ...prediction,
+          issueNumber: nextIssue,
+          serverTimestamp: Date.now(),
+          engine: "AMD-REVERSION-V10"
+        };
+      } catch (predErr: any) {
+        console.error("[Vercel-Proxy] Prediction Logic Error:", predErr.message);
+      }
     }
 
     return res.status(200).json(data);
 
   } catch (error: any) {
-    console.error("[Vercel-Proxy] Error:", error.message);
-    return res.status(500).json({ 
-      code: 500, 
-      msg: "SERVER_API_OFFLINE",
+    const status = error.response?.status || 500;
+    const errorData = error.response?.data;
+    
+    console.error(`[Vercel-Proxy] Error (${status}):`, error.message);
+    
+    return res.status(status).json({ 
+      code: status, 
+      msg: "SERVER_PROTOCOL_SYNC_ERROR",
       error: error.message,
-      detail: "Check deployment environment variables for valid Token/Signature."
+      upstream: errorData || null,
+      detail: "The connection to the upstream lottery server failed. This usually indicates an expired Token or blocked IP."
     });
   }
 }

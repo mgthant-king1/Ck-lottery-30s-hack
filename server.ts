@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import axios from "axios";
 import dotenv from "dotenv";
-import { generateDeterministicPrediction } from "./src/services/predictionEngine";
+import { generateDeterministicPrediction } from "./api/lib/predictionEngine";
 
 dotenv.config();
 
@@ -12,7 +12,7 @@ dotenv.config();
 const globalApiConfig = {
   token: process.env.API_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc3NzczMTYyOSIsIm5iZiI6IjE3Nzc3MzExNzkyIiwiZXhwIjoiMTc3NzczMzQyOSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi1pZGVudGl0eS1jbGFpbXMvZXhwaXJhdGlvbiI6IjUvMi8yMDI2IDk6MjA6MjkgUE0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBY2Nlc3NfVG9rZW4iLCJVc2VySWQiOiI0ODcyMDMiLCJVc2VyTmFtZSI6Ijk1OTc3NzU0NTU4OSIsIlVzZXJQaG90byI6IjIwIiwiTmlja05hbWUiOiJNR1RIQU5UICIsIkFtb3VudCI6IjEzLjg3IiwiSW50ZWdyYWwiOiIwIiwiTG9naW5NYXJrIjoiaDUiLCJMb2dpblRpbWUiOiI1LzIvMjAyNiA4OjUwOjI5IFBNIiwiTG9naW5JUEFkZHJlc3MiOiI1Ni42OS4zMi42NiIsIkRiTnVtYmVyIjoiMCIsIklzdmFsaWRhdG9yIjoiMCIsIktleUNvZGUiOiI1OTUiLCJUb2tlblR5cGUiOiJBY2Nlc3NfVG9rZW4iLCJQaG9uZVR5cGUiOiIxIiwiVXNlclR5cGUiOiIwIiwiVXNlck5hbWUyIjoiIiwiaXNzIjoiand0SXNzdWVyIiwiYXVkIjoibG90dGVyeVRpY2tldCJ9.Bdkvu8LVelMKnsknZBG0klaf67q75pzYvVEJR0miR5A",
   signature: process.env.API_SIGNATURE || "02B709728F301B2AD39740BED6BDA1CD",
-  timestamp: process.env.API_TIMESTAMP || "1777731689",
+  timestamp: process.env.API_TIMESTAMP || "1777885318",
   random: process.env.API_RANDOM || "5074950b0f484b108bd9a8067e7f1025"
 };
 
@@ -50,8 +50,15 @@ async function fetchLotteryResults(incomingConfig: any = {}) {
 
     return response.data;
   } catch (error: any) {
-    console.error("[Proxy] Upstream Error:", error.message);
-    return { code: 500, msg: "Connection Refused by Upstream. Vercel IP might be blocked or Signature expired." };
+    const status = error.response?.status || 500;
+    console.error(`[Proxy] Upstream Error (${status}):`, error.message);
+    return { 
+      code: status, 
+      msg: "SERVER_PROTOCOL_SYNC_ERROR",
+      detail: "Connection Refused by Upstream. Vercel IP might be blocked or Signature expired.",
+      error: error.message,
+      upstream: error.response?.data || null
+    };
   }
 }
 
@@ -68,15 +75,23 @@ export async function createApp() {
       try {
         const results = data.data.list;
         const prediction = generateDeterministicPrediction(results);
-        const nextIssue = (BigInt(results[0].issueNumber) + BigInt(1)).toString();
+        
+        const currentIssue = results[0].issueNumber;
+        let nextIssue = "";
+        try {
+          nextIssue = (BigInt(currentIssue) + BigInt(1)).toString();
+        } catch {
+          nextIssue = (parseInt(currentIssue) + 1).toString();
+        }
         
         data.prediction = {
           ...prediction,
           issueNumber: nextIssue,
-          serverTimestamp: Date.now()
+          serverTimestamp: Date.now(),
+          engine: "AMD-REVERSION-V10"
         };
-      } catch (err) {
-        console.error("[Backend] Prediction Logic Error:", err);
+      } catch (err: any) {
+        console.error("[Backend] Prediction Logic Error:", err.message);
       }
     }
     

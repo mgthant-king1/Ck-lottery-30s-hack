@@ -84,11 +84,26 @@ export default function App() {
     { issueNumber: "202605010992", number: "6", colour: "red", premium: "108900" },
   ], []);
 
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isStale, setIsStale] = useState(false);
+
+  // Check for stale data every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (lastUpdated) {
+        const diff = (Date.now() - lastUpdated.getTime()) / 1000;
+        setIsStale(diff > 45); // Consider stale if no update for 45 seconds
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lastUpdated]);
+
   const fetchResults = useCallback(async () => {
     if (demoMode) {
       setResults(MOCK_RESULTS);
       setLoading(false);
       setError(null);
+      setLastUpdated(new Date());
       return;
     }
 
@@ -103,6 +118,7 @@ export default function App() {
       
       if (response.data?.code === 0) {
         const newList = response.data.data.list as LotteryResult[];
+        setLastUpdated(new Date());
         
         // Handle server-side prediction if provided
         if (response.data.prediction) {
@@ -136,7 +152,6 @@ export default function App() {
                 confidence: aiPrediction.confidence,
                 actualNumber: matched.number,
                 actualColor: matched.colour,
-                // Win/Lose based ONLY on BIG/SMALL per user request
                 isCorrect: predictedSize === actualSize,
                 timestamp: new Date()
               }, ...prev].slice(0, 100);
@@ -150,16 +165,14 @@ export default function App() {
       } else {
         const msg = response.data?.msg || 'API Stream Failure';
         setError(msg);
-        if (results.length === 0) setResults(MOCK_RESULTS); // Fallback to see UI
       }
     } catch (err: any) {
       const details = err.response?.data?.details || err.message;
       setError(details);
-      if (results.length === 0) setResults(MOCK_RESULTS); // Fallback to see UI
     } finally {
       setLoading(false);
     }
-  }, [apiConfig, aiPrediction, predictionHistory, demoMode, MOCK_RESULTS, results.length]);
+  }, [apiConfig, aiPrediction, demoMode, MOCK_RESULTS, results.length]);
 
   // Precision Sync: Instead of fixed intervals, we calculate time until next period
   useEffect(() => {
@@ -168,13 +181,12 @@ export default function App() {
     const syncWithClock = async () => {
       await fetchResults();
       
-      // Calculate milliseconds until the next 30-second mark (00s or 30s)
       const now = Date.now();
       const nextSync = Math.ceil(now / 30000) * 30000;
       let delay = nextSync - now;
       
-      // Add a small buffer (1.5s) to ensure the API has updated on their end
-      delay += 1500;
+      // Add a small buffer (2.5s) for Engine V10 stabilization on server
+      delay += 2500;
       
       timeoutId = setTimeout(syncWithClock, delay);
     };
@@ -313,10 +325,10 @@ export default function App() {
               {demoMode ? 'SIMULATION_ON' : 'LIVE_DATA'}
             </button>
             <div className="flex items-center gap-4 bg-zinc-900/50 border border-white/5 p-2 pr-6 rounded-2xl backdrop-blur-md">
-              {error ? (
+              {error || isStale ? (
                 <div className="flex flex-col items-end pr-2 border-r border-red-500/20">
-                  <span className="text-[7px] font-black text-red-500 uppercase tracking-widest">API_ERR</span>
-                  <span className="text-[9px] font-mono font-bold text-red-400">Offline</span>
+                  <span className="text-[7px] font-black text-red-500 uppercase tracking-widest">{isStale && !error ? 'STALE_LINK' : 'API_ERR'}</span>
+                  <span className="text-[9px] font-mono font-bold text-red-400">{isStale && !error ? 'Desynced' : 'Offline'}</span>
                 </div>
               ) : (
                 <div className="flex flex-col items-end pr-2 border-r border-emerald-500/20">
@@ -325,8 +337,28 @@ export default function App() {
                 </div>
               )}
               <div className="w-32 h-10 bg-black/40 rounded-xl flex items-center justify-center relative overflow-hidden">
-                <div key={results[0]?.issueNumber} className="absolute inset-0 bg-emerald-500/5 origin-left" style={{ animation: `grow ${REFRESH_RATE}ms linear forwards` }} />
-                <span className="text-[10px] font-black text-emerald-400 tracking-tighter uppercase relative z-10">{loading ? 'SYNCING...' : 'LIVE_FEED'}</span>
+                <AnimatePresence mode="wait">
+                  {loading ? (
+                    <motion.div 
+                      key="loading"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-x-0 h-full bg-emerald-500/10 animate-pulse"
+                    />
+                  ) : (
+                    <motion.div 
+                      key="active"
+                      className="absolute inset-0 bg-emerald-500/5 origin-left" 
+                    />
+                  )}
+                </AnimatePresence>
+                <span className={cn(
+                  "text-[10px] font-black tracking-tighter uppercase relative z-10 transition-colors",
+                  isStale ? "text-red-400" : "text-emerald-400"
+                )}>
+                  {loading ? 'SYNCING...' : isStale ? 'LINK_BROKEN' : 'LIVE_FEED'}
+                </span>
               </div>
               <button 
                 onClick={() => setShowConfig(true)} 
@@ -953,6 +985,17 @@ export default function App() {
             </AnimatePresence>
           </div>
         </main>
+
+        <footer className="pt-8 pb-16 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 opacity-30 mt-12">
+          <div className="flex items-center gap-6">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{lastUpdated && `Last Sync: ${lastUpdated.toLocaleTimeString()}`}</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Neural Engine v10.0.2</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">AMD Reversion Pattern Locked</span>
+          </div>
+          <p className="text-[10px] font-mono uppercase tracking-widest text-center md:text-right">
+            © 2026 Neural Analytics Division • Experimental Prediction Layer
+          </p>
+        </footer>
       </div>
 
       {/* Config Interface */}
@@ -971,6 +1014,7 @@ export default function App() {
                 <div className="space-y-2">
                   <h2 className="text-3xl font-black uppercase italic tracking-tight">Stream Protocols</h2>
                   <p className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase">Encryption Access & Proxy Tuning</p>
+                  <p className="text-[9px] text-emerald-400/60 font-medium italic">Hint: Extract Token/Signature from Browser DevTools Network tab on original platform.</p>
                 </div>
                 <button onClick={() => setShowConfig(false)} className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-all hover:rotate-90"><X className="w-7 h-7 text-zinc-400 hover:text-white" /></button>
               </div>
@@ -1024,21 +1068,37 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* System Error Toast */}
+      {/* Global Floating Error / Notification */}
       <AnimatePresence>
-        {error && (
+        {(error || quotaExhaustedUntil || isStale) && (
           <motion.div 
-            initial={{ opacity: 0, x: 40, scale: 0.9 }} 
-            animate={{ opacity: 1, x: 0, scale: 1 }} 
-            exit={{ opacity: 0, scale: 0.9 }} 
-            className="fixed bottom-12 right-12 z-50 bg-red-600 text-white p-8 rounded-[2.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] flex items-center gap-6 border border-red-500/50 max-w-sm backdrop-blur-3xl"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-zinc-900 border border-white/10 px-8 py-4 rounded-3xl shadow-2xl flex items-center gap-6 backdrop-blur-2xl min-w-[340px]"
           >
-            <div className="p-4 bg-black/20 rounded-2xl"><AlertTriangle className="w-10 h-10" /></div>
-            <div className="flex-1 space-y-1">
-              <h4 className="text-[10px] font-black uppercase tracking-widest">Protocol Sync Error</h4>
-              <p className="text-[10px] opacity-90 font-mono tracking-tighter leading-tight">{error}</p>
+            <div className={cn(
+              "p-4 rounded-2xl flex items-center justify-center",
+              (error || isStale) ? "bg-red-500/20" : "bg-emerald-500/20"
+            )}>
+              <AlertTriangle className={cn("w-6 h-6", (error || isStale) ? "text-red-400" : "text-emerald-400")} />
             </div>
-            <button onClick={() => setError(null)} className="p-2 hover:bg-black/10 rounded-xl transition-all"><X className="w-5 h-5" /></button>
+            <div className="flex-1 space-y-1">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
+                {isStale ? "SYSTEM_DESYNC_DETECTION" : "PROTOCOL_ALARM"}
+              </h4>
+              <p className="text-xs font-bold leading-tight">
+                {isStale && !error ? "Data feed has stalled. Check connection." : 
+                 error === 'SERVER_PROTOCOL_SYNC_ERROR' ? "Protocol rejected. Please reset Token/Signature." : 
+                 error}
+              </p>
+            </div>
+            <button 
+              onClick={() => { setError(null); setIsStale(false); }} 
+              className="p-2 hover:bg-white/10 rounded-xl transition-all"
+            >
+              <X className="w-5 h-5 opacity-40 hover:opacity-100" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
