@@ -67,7 +67,7 @@ export async function createApp() {
   app.use(express.json());
 
   // API Route with on-the-fly prediction
-  app.post("/api/lottery/results", async (req, res) => {
+  app.post("/api/results", async (req, res) => {
     const data = await fetchLotteryResults(req.body);
     
     // If successful, inject prediction for the next period

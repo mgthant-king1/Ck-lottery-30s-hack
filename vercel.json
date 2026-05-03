@@ -2,7 +2,7 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/api/lottery/results",
+      "source": "/api/results",
       "destination": "/api/results.ts"
     },
     {

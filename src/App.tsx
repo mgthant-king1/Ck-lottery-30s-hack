@@ -109,7 +109,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const response = await axios.post('/api/lottery/results', {
+      const response = await axios.post('/api/results', {
         pageSize: 10,
         pageNo: 1,
         typeId: WINGO_TYPE_ID,
