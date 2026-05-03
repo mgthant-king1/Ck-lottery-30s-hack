@@ -67,7 +67,7 @@ export default function App() {
   const [apiConfig, setApiConfig] = useState<ApiConfig>({
     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzc3NzczMTYyOSIsIm5iZiI6IjE3Nzc3MzExNzkyIiwiZXhwIjoiMTc3NzczMzQyOSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi1pZGVudGl0eS1jbGFpbXMvZXhwaXJhdGlvbiI6IjUvMi8yMDI2IDk6MjA6MjkgUE0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBY2Nlc3NfVG9rZW4iLCJVc2VySWQiOiI0ODcyMDMiLCJVc2VyTmFtZSI6Ijk1OTc3NzU0NTU4OSIsIlVzZXJQaG90byI6IjIwIiwiTmlja05hbWUiOiJNR1RIQU5UICIsIkFtb3VudCI6IjEzLjg3IiwiSW50ZWdyYWwiOiIwIiwiTG9naW5NYXJrIjoiaDUiLCJMb2dpblRpbWUiOiI1LzIvMjAyNiA4OjUwOjI5IFBNIiwiTG9naW5JUEFkZHJlc3MiOiI1Ni42OS4zMi42NiIsIkRiTnVtYmVyIjoiMCIsIklzdmFsaWRhdG9yIjoiMCIsIktleUNvZGUiOiI1OTUiLCJUb2tlblR5cGUiOiJBY2Nlc3NfVG9rZW4iLCJQaG9uZVR5cGUiOiIxIiwiVXNlclR5cGUiOiIwIiwiVXNlck5hbWUyIjoiIiwiaXNzIjoiand0SXNzdWVyIiwiYXVkIjoibG90dGVyeVRpY2tldCJ9.Bdkvu8LVelMKnsknZBG0klaf67q75pzYvVEJR0miR5A",
     signature: "02B709728F301B2AD39740BED6BDA1CD",
-    timestamp: "1777731689",
+    timestamp: "1777885318",
     random: "5074950b0f484b108bd9a8067e7f1025"
   });
 
@@ -392,15 +392,15 @@ export default function App() {
                       />
                     )}
                   </div>
-                  <h2 className="text-xs font-black uppercase tracking-widest text-zinc-400">Neural Sync v6.0</h2>
+                  <h2 className="text-xs font-black uppercase tracking-widest text-zinc-400">Neural Sync v10.0</h2>
                 </div>
                 <div className="flex items-center gap-4">
                   <button 
-                    onClick={generatePrediction}
-                    disabled={isAiProcessing}
+                    onClick={() => fetchResults()}
+                    disabled={loading}
                     className="p-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-all disabled:opacity-50"
                   >
-                    <RefreshCw className={cn("w-3 h-3 text-zinc-500", isAiProcessing && "animate-spin")} />
+                    <RefreshCw className={cn("w-3 h-3 text-zinc-500", loading && "animate-spin")} />
                   </button>
                   {quotaExhaustedUntil && quotaTimeLeft > 0 && (
                     <div className="flex items-center gap-1.5 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-md animate-pulse">
