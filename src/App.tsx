@@ -92,7 +92,7 @@ export default function App() {
     const timer = setInterval(() => {
       if (lastUpdated) {
         const diff = (Date.now() - lastUpdated.getTime()) / 1000;
-        setIsStale(diff > 90); // Increased threshold for stability
+        setIsStale(diff > 120); // 2-minute threshold for high-stability synchronization
       }
     }, 1000);
     return () => clearInterval(timer);
